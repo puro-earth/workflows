@@ -8,6 +8,9 @@ on:
       stack:
         required: true
         type: string
+      skip_smoke_tests:
+        type: boolean
+        default: false
     secrets:
       aws_access_key_id:
         required: true
@@ -69,4 +72,5 @@ jobs:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
 
       - name: Run smoke-tests
+        if: ${{ !inputs.skip_smoke_tests }}
         run: yarn smoke-test
