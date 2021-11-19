@@ -15,8 +15,6 @@ on:
         required: true
       aws_region:
         required: true
-      aws_role_arn:
-        required: true
       aws_secret_access_key:
         required: true
       pulumi_access_token:
@@ -68,7 +66,7 @@ jobs:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ secrets.aws_region }}
-          role-to-assume: ${{ secrets.aws_role_arn }}
+          role-to-assume: arn:aws:iam::${{ needs.determine_env.outputs.account_id }}:role/github-${{ needs.determine_env.outputs.env }}-DeploymentRole
           role-duration-seconds: ${{ inputs.aws_role_duration }}
           role-session-name: deploymentSession
 
