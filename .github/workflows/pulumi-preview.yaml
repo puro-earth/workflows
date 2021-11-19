@@ -1,0 +1,52 @@
+name: preview PR to main
+on:
+  workflow_call:
+    inputs:
+      aws_role_duration:
+        type: number
+        default: 1200
+      stack:
+        required: true
+        type: string
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_region:
+        required: true
+      aws_role_arn:
+        required: true
+      aws_secret_access_key:
+        required: true
+      pulumi_access_token:
+        required: true
+
+jobs:
+  preview:
+    name: Preview on dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: assume aws deployment role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ secrets.aws_region }}
+          role-to-assume: ${{ secrets.aws_role_arn }}
+          role-duration-seconds: ${{ inputs.aws_role_duration }}
+          role-session-name: deploymentSession
+
+      - name: Install Yarn dependencies
+        run: yarn install --frozen-lockfile
+
+      - uses: pulumi/actions@v3
+        name: Preview Pulumi for dev
+        with:
+          command: preview
+          stack-name: puroearth/dev
+          comment-on-pr: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}

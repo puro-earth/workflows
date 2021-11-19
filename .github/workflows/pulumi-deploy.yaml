@@ -1,0 +1,74 @@
+name: pulumi deploy
+on:
+  workflow_call:
+    inputs:
+      aws_role_duration:
+        type: number
+        default: 1200
+      stack:
+        required: true
+        type: string
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_account_id:
+        required: true
+      aws_region:
+        required: true
+      aws_role_arn:
+        required: true
+      aws_secret_access_key:
+        required: true
+      pulumi_access_token:
+        required: true
+
+jobs:
+  deploy:
+    name: pulumi deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "14"
+          cache: "yarn"
+
+      - run: yarn install --frozen-lockfile
+
+      - name: assume aws deployment role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ secrets.aws_region }}
+          role-to-assume: ${{ secrets.aws_role_arn }}
+          role-duration-seconds: ${{ inputs.aws_role_duration }}
+          role-session-name: deploymentSession
+
+      # Authenticate to ECR, required for running the smoke-tests later
+      - name: Login to private ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@446a798035445cdfd5111ad9a49f48d46083a170
+        # Note: We're referencing the desired version by commit hash instead of version number,
+        # since this newer version is not yet released and introduces required fixes we need.
+
+      - uses: pulumi/actions@v3
+        name: pulumi preview
+        with:
+          command: preview
+          stack-name: puroearth/${{ inputs.stack }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          pulumi_access_token: ${{ secrets.pulumi_access_token }}
+
+      - uses: pulumi/actions@v3
+        name: pulumi up
+        with:
+          command: up
+          stack-name: puroearth/${{ inputs.stack }}
+        env:
+          pulumi_access_token: ${{ secrets.pulumi_access_token }}
+
+      - name: Run smoke-tests
+        run: yarn smoke-test

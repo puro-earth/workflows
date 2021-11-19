@@ -1,0 +1,168 @@
+name: infra-test
+
+on:
+  workflow_call:
+    inputs:
+      aws_role_duration:
+        type: number
+        default: 3600
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_account_id_dev:
+        required: true
+      aws_account_id_prod:
+        required: true
+      aws_region:
+        required: true
+      aws_role_arn:
+        required: true
+      aws_secret_access_key:
+        required: true
+      pulumi_access_token:
+        required: true
+
+jobs:
+  determine_env:
+    name: determine environment
+    if: ${{ github.event.comment.body == '/infra-test' }}
+    runs-on: ubuntu-latest
+    outputs:
+      env: ${{ steps.env.outputs.env }}
+      account_id: ${{ steps.env.outputs.account_id }}
+    steps:
+      - name: resolve pr refs
+        id: refs
+        uses: eficode/resolve-pr-refs@v0.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: determine env
+        id: env
+        run: |
+          if [[ "${{ steps.refs.base_ref }}" == "prod" ]]; then
+            echo "::set-output name=env::prod"
+            echo "::set-output name=account_id::${{ secrets.aws_account_id_prod }}"
+          elif [[ "${{ steps.refs.base_ref }}" == "main" ]]; then
+            echo "::set-output name=env::dev"
+            echo "::set-output name=account_id::${{ secrets.aws_account_id_dev }}"
+          else
+            echo "This workflow is intended only for PRs whose base ref is prod or main"
+            exit 1
+          fi
+
+  infra_test:
+    name: infra test
+    if: ${{ github.event.comment.body == '/infra-test' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: resolve pr refs
+        id: refs
+        uses: eficode/resolve-pr-refs@v0.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: assume aws deployment role
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ secrets.aws_region }}
+          role-to-assume: ${{ secrets.aws_role_arn }}
+          role-duration-seconds: ${{ inputs.aws_role_duration }}
+          role-session-name: deploymentSession
+
+      # Spin up current state
+      - name: current state checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ steps.refs.base_ref }}
+      - name: generate test stack yaml file
+        run: |
+          cp Pulumi.${{ needs.determine_env.outputs.env }}.yaml Pulumi.${{ needs.determine_env.outputs.env }}-test.yaml
+          pulumi config set subdomain "$(pulumi config get subdomain --stack puroearth/${{ needs.determine_env.outputs.env }})test." --stack puroearth/${{ needs.determine_env.outputs.env }}-test
+          pulumi config set skip-final-snapshot "true" --stack puroearth/${{ needs.determine_env.outputs.env }}-test
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+      - name: setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: "14"
+          cache: "yarn"
+      - name: yarn install
+        run: yarn install --frozen-lockfile
+      - name: current state up
+        uses: pulumi/actions@v3
+        with:
+          command: up
+          stack-name: puroearth/${{ needs.determine_env.outputs.env }}-test
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+
+      # Preview changes
+      - name: target state checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ steps.refs.head_ref }}
+      - name: generate test stack yaml file
+        run: |
+          cp Pulumi.${{ needs.determine_env.outputs.env }}.yaml Pulumi.${{ needs.determine_env.outputs.env }}-test.yaml
+          pulumi config set subdomain "$(pulumi config get subdomain --stack puroearth/${{ needs.determine_env.outputs.env }})test." --stack puroearth/${{ needs.determine_env.outputs.env }}-test
+          pulumi config set skip-final-snapshot "true" --stack puroearth/${{ needs.determine_env.outputs.env }}-test
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+      - name: yarn install
+        run: yarn install --frozen-lockfile
+      - name: target state pulumi preview
+        uses: pulumi/actions@v3
+        with:
+          command: preview
+          stack-name: puroearth/${{ needs.determine_env.outputs.env }}-test
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+
+      # Apply changes
+      - name: target state pulumi up
+        uses: pulumi/actions@v3
+        id: changes
+        with:
+          command: up
+          stack-name: puroearth/${{ needs.determine_env.outputs.env }}-test
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+        continue-on-error: true
+
+      # Report status
+      - name: report status
+        run: |
+          STATE=failure
+          if [[ "${{ steps.changes.outcome }}" == "success" ]]; then
+            STATE=success
+          fi
+          SHA=$(git rev-parse HEAD)
+          echo "Reporting status for commit $SHA"
+          curl --request POST \
+          --url "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+          --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+          --header 'accept: application/vnd.github.v3+json' \
+          --header 'content-type: application/json' \
+          --data "{
+            \"state\": \"$STATE\",
+            \"context\": \"infra-test\",
+            \"target_url\": \"${{ github.event.issue.pull_request.url }}\"
+            }" \
+          --fail
+          if [[ "$STATE" != "success" ]]; then
+            echo "pulumi failed to apply changes"
+            echo "exit 1"
+            exit 1
+          fi
+
+      # Cleanup
+      - name: pulumi destroy
+        uses: pulumi/actions@v3
+        with:
+          command: destroy
+          stack-name: puroearth/${{ needs.determine_env.outputs.env }}-test
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}

@@ -1,0 +1,54 @@
+name: fast-forward merge
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_call:
+    secrets:
+      gh_pa_token_permissive:
+        required: true
+
+jobs:
+  ff_merge:
+    name: ff-merge
+    if: ${{ github.event.comment.body == '/ff-merge' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: resolve pr refs
+        id: refs
+        uses: eficode/resolve-pr-refs@v0.0.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ steps.refs.outputs.base_ref }}
+      - name: fast forward merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.gh_pa_token_permissive }}
+        run: |
+          set +e
+          echo "git fetch origin ${{ steps.refs.outputs.head_ref }}" >tempoutfile
+          git fetch origin ${{ steps.refs.outputs.head_ref }} >>tempoutfile 2>&1
+          fetch_rc=$?
+          echo "git merge --ff-only origin/${{ steps.refs.outputs.head_ref }}" >>tempoutfile
+          git merge --ff-only origin/${{ steps.refs.outputs.head_ref }} >>tempoutfile 2>&1
+          merge_rc=$?
+          set -e
+          if [[ $fetch_rc -eq 0 && $merge_rc -eq 0 ]]; then
+            cat tempoutfile
+            echo "Merge successful."
+            git push origin ${{ steps.refs.outputs.base_ref }}
+          else
+            cat tempoutfile
+            echo "Merge failed."
+            COMMENTS_URL="${{ github.event.issue.comments_url }}"
+            COMMENTS_PATH="${COMMENTS_URL##*'api.github.com/'}"
+            echo "Commenting PR $COMMENTS_PATH"
+            echo "MERGE ERROR:" > temperrfile
+            echo '```' >> temperrfile
+            cat tempoutfile >> temperrfile
+            echo '```' >> temperrfile
+            hub api $COMMENTS_PATH -F 'body=@temperrfile'
+            exit 1
+          fi
