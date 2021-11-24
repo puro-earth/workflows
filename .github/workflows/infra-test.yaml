@@ -88,6 +88,7 @@ jobs:
         run: |
           cp Pulumi.${{ needs.determine_env.outputs.env }}.yaml Pulumi.${{ needs.determine_env.outputs.env }}-test.yaml
           pulumi config set subdomain "$(pulumi config get subdomain --stack puroearth/${{ needs.determine_env.outputs.env }})test." --stack puroearth/${{ needs.determine_env.outputs.env }}-test
+          pulumi config set email-domain-prefix "$(pulumi config get email-domain-prefix --stack puroearth/${{ needs.determine_env.outputs.env }})test." --stack puroearth/${{ needs.determine_env.outputs.env }}-test
           pulumi config set skip-final-snapshot "true" --stack puroearth/${{ needs.determine_env.outputs.env }}-test
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
@@ -115,6 +116,7 @@ jobs:
         run: |
           cp Pulumi.${{ needs.determine_env.outputs.env }}.yaml Pulumi.${{ needs.determine_env.outputs.env }}-test.yaml
           pulumi config set subdomain "$(pulumi config get subdomain --stack puroearth/${{ needs.determine_env.outputs.env }})test." --stack puroearth/${{ needs.determine_env.outputs.env }}-test
+          pulumi config set email-domain-prefix "$(pulumi config get email-domain-prefix --stack puroearth/${{ needs.determine_env.outputs.env }})test." --stack puroearth/${{ needs.determine_env.outputs.env }}-test
           pulumi config set skip-final-snapshot "true" --stack puroearth/${{ needs.determine_env.outputs.env }}-test
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
