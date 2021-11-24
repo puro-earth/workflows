@@ -4,6 +4,13 @@ on:
   issue_comment:
     types: [created]
   workflow_call:
+    inputs:
+      comment:
+        required: true
+        type: string
+      comments_url:
+        required: true
+        type: string
     secrets:
       gh_pa_token_permissive:
         required: true
@@ -11,12 +18,12 @@ on:
 jobs:
   ff_merge:
     name: ff-merge
-    if: ${{ github.event.comment.body == '/ff-merge' }}
+    if: ${{ inputs.comment == '/ff-merge' }}
     runs-on: ubuntu-latest
     steps:
       - name: resolve pr refs
         id: refs
-        uses: eficode/resolve-pr-refs@v0.0.1
+        uses: eficode/resolve-pr-refs@v0.0.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: checkout
@@ -42,7 +49,7 @@ jobs:
           else
             cat tempoutfile
             echo "Merge failed."
-            COMMENTS_URL="${{ github.event.issue.comments_url }}"
+            COMMENTS_URL="${{ inputs.comments_url }}"
             COMMENTS_PATH="${COMMENTS_URL##*'api.github.com/'}"
             echo "Commenting PR $COMMENTS_PATH"
             echo "MERGE ERROR:" > temperrfile
