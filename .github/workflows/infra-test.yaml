@@ -6,6 +6,15 @@ on:
       aws_role_duration:
         type: number
         default: 3600
+      comment:
+        type: string
+        required: true
+      pull_request_url:
+        type: string
+        required: true
+      repository:
+        type: string
+        required: true
     secrets:
       aws_access_key_id:
         required: true
@@ -23,7 +32,7 @@ on:
 jobs:
   determine_env:
     name: determine environment
-    if: ${{ github.event.comment.body == '/infra-test' }}
+    if: ${{ inputs.comment == '/infra-test' }}
     runs-on: ubuntu-latest
     outputs:
       env: ${{ steps.env.outputs.env }}
@@ -51,7 +60,7 @@ jobs:
 
   infra_test:
     name: infra test
-    if: ${{ github.event.comment.body == '/infra-test' }}
+    if: ${{ inputs.comment == '/infra-test' }}
     runs-on: ubuntu-latest
     steps:
       - name: resolve pr refs
@@ -140,14 +149,14 @@ jobs:
           SHA=$(git rev-parse HEAD)
           echo "Reporting status for commit $SHA"
           curl --request POST \
-          --url "https://api.github.com/repos/${{ github.repository }}/statuses/$SHA" \
+          --url "https://api.github.com/repos/${{ inputs.repository }}/statuses/$SHA" \
           --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
           --header 'accept: application/vnd.github.v3+json' \
           --header 'content-type: application/json' \
           --data "{
             \"state\": \"$STATE\",
             \"context\": \"infra-test\",
-            \"target_url\": \"${{ github.event.issue.pull_request.url }}\"
+            \"target_url\": \"${{ inputs.pull_request_url }}\"
             }" \
           --fail
           if [[ "$STATE" != "success" ]]; then
