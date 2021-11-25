@@ -21,6 +21,9 @@ on:
       repository:
         type: string
         required: true
+      skip_smoke_tests:
+        type: boolean
+        default: false
       subdomain_suffix:
         type: string
         required: true
@@ -122,11 +125,18 @@ jobs:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
         continue-on-error: true
 
+      # Smoketest
+      - name: Run smoke-tests
+        id: test
+        if: ${{ steps.changes.outcome == 'success' }}
+        run: yarn smoke-test
+        continue-on-error: true
+
       # Report status
       - name: report status
         run: |
           STATE=failure
-          if [[ "${{ steps.changes.outcome }}" == "success" ]]; then
+          if [[ "${{ steps.changes.outcome }}" == "success" && "${{ steps.test.outcome }}" == "success" ]]; then
             STATE=success
           fi
           SHA=$(git rev-parse HEAD)
@@ -142,8 +152,12 @@ jobs:
             \"target_url\": \"${{ inputs.pull_request_url }}\"
             }" \
           --fail
-          if [[ "$STATE" != "success" ]]; then
+          if [[ "${{ steps.changes.outcome }}" != "success" ]]; then
             echo "pulumi failed to apply changes"
+            echo "exit 1"
+            exit 1
+          elif [[ "${{ steps.test.outcome }}" != "success" ]]; then
+            echo "smoketest failed"
             echo "exit 1"
             exit 1
           fi
