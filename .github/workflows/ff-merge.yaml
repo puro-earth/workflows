@@ -5,10 +5,13 @@ on:
     types: [created]
   workflow_call:
     inputs:
-      comment:
+      base_ref:
         required: true
         type: string
       comments_url:
+        required: true
+        type: string
+      head_ref:
         required: true
         type: string
     secrets:
@@ -18,34 +21,28 @@ on:
 jobs:
   ff_merge:
     name: ff-merge
-    if: ${{ inputs.comment == '/ff-merge' }}
     runs-on: ubuntu-latest
     steps:
-      - name: resolve pr refs
-        id: refs
-        uses: eficode/resolve-pr-refs@v0.0.3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
       - name: checkout
         uses: actions/checkout@v2
         with:
-          ref: ${{ steps.refs.outputs.base_ref }}
+          ref: ${{ inputs.base_ref }}
       - name: fast forward merge
         env:
           GITHUB_TOKEN: ${{ secrets.gh_pa_token_permissive }}
         run: |
           set +e
-          echo "git fetch origin ${{ steps.refs.outputs.head_ref }}" >tempoutfile
-          git fetch origin ${{ steps.refs.outputs.head_ref }} >>tempoutfile 2>&1
+          echo "git fetch origin ${{ inputs.head_ref }}" >tempoutfile
+          git fetch origin ${{ inputs.head_ref }} >>tempoutfile 2>&1
           fetch_rc=$?
-          echo "git merge --ff-only origin/${{ steps.refs.outputs.head_ref }}" >>tempoutfile
-          git merge --ff-only origin/${{ steps.refs.outputs.head_ref }} >>tempoutfile 2>&1
+          echo "git merge --ff-only origin/${{ inputs.head_ref }}" >>tempoutfile
+          git merge --ff-only origin/${{ inputs.head_ref }} >>tempoutfile 2>&1
           merge_rc=$?
           set -e
           if [[ $fetch_rc -eq 0 && $merge_rc -eq 0 ]]; then
             cat tempoutfile
             echo "Merge successful."
-            git push origin ${{ steps.refs.outputs.base_ref }}
+            git push origin ${{ inputs.base_ref }}
           else
             cat tempoutfile
             echo "Merge failed."
