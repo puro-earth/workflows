@@ -6,7 +6,13 @@ on:
       aws_role_duration:
         type: number
         default: 3600
-      comment:
+      base_ref:
+        type: string
+        required: true
+      emaildomain_suffix:
+        type: string
+        default: ""
+      head_ref:
         type: string
         required: true
       pull_request_url:
@@ -15,14 +21,18 @@ on:
       repository:
         type: string
         required: true
+      subdomain_suffix:
+        type: string
+        required: true
+      stack:
+        type: string
+        required: true
     secrets:
       aws_access_key_id:
         required: true
-      aws_account_id_dev:
-        required: true
-      aws_account_id_prod:
-        required: true
       aws_region:
+        required: true
+      aws_role_arn:
         required: true
       aws_secret_access_key:
         required: true
@@ -30,37 +40,8 @@ on:
         required: true
 
 jobs:
-  determine_env:
-    name: determine environment
-    if: ${{ inputs.comment == '/infra-test' }}
-    runs-on: ubuntu-latest
-    outputs:
-      env: ${{ steps.env.outputs.env }}
-      account_id: ${{ steps.env.outputs.account_id }}
-    steps:
-      - name: resolve pr refs
-        id: refs
-        uses: eficode/resolve-pr-refs@v0.0.3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: determine env
-        id: env
-        run: |
-          if [[ "${{ steps.refs.base_ref }}" == "prod" ]]; then
-            echo "::set-output name=env::prod"
-            echo "::set-output name=account_id::${{ secrets.aws_account_id_prod }}"
-          elif [[ "${{ steps.refs.base_ref }}" == "main" ]]; then
-            echo "::set-output name=env::dev"
-            echo "::set-output name=account_id::${{ secrets.aws_account_id_dev }}"
-          else
-            echo "This workflow is intended only for PRs whose base ref is prod or main"
-            exit 1
-          fi
-
   infra_test:
     name: infra test
-    if: ${{ inputs.comment == '/infra-test' }}
     runs-on: ubuntu-latest
     steps:
       - name: resolve pr refs
@@ -75,20 +56,21 @@ jobs:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ secrets.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.determine_env.outputs.account_id }}:role/github-${{ needs.determine_env.outputs.env }}-DeploymentRole
+          role-to-assume: ${{ secrets.aws_role_arn }}
           role-duration-seconds: ${{ inputs.aws_role_duration }}
-          role-session-name: deploymentSession
+          role-session-name: ${{ inputs.stack }}TestSession
 
       # Spin up current state
       - name: current state checkout
         uses: actions/checkout@v2
         with:
-          ref: ${{ steps.refs.base_ref }}
+          ref: ${{ inputs.base_ref }}
       - name: generate test stack yaml file
         run: |
-          cp Pulumi.${{ needs.determine_env.outputs.env }}.yaml Pulumi.${{ needs.determine_env.outputs.env }}-test.yaml
-          pulumi config set subdomain "$(pulumi config get subdomain --stack puroearth/${{ needs.determine_env.outputs.env }})test." --stack puroearth/${{ needs.determine_env.outputs.env }}-test
-          pulumi config set skip-final-snapshot "true" --stack puroearth/${{ needs.determine_env.outputs.env }}-test
+          cp Pulumi.${{ inputs.stack }}.yaml Pulumi.${{ inputs.stack }}-test.yaml
+          pulumi config set subdomain "$(pulumi config get subdomain --stack puroearth/${{ inputs.stack }})${{ inputs.subdomain_suffix }}" --stack puroearth/${{ inputs.stack }}-test
+          pulumi config set email-domain-prefix "$(pulumi config get email-domain-prefix --stack puroearth/${{ inputs.stack }})${{ inputs.emaildomain_suffix }}" --stack puroearth/${{ inputs.stack }}-test
+          pulumi config set skip-final-snapshot "true" --stack puroearth/${{ inputs.stack }}-test
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
       - name: setup node
@@ -102,7 +84,7 @@ jobs:
         uses: pulumi/actions@v3
         with:
           command: up
-          stack-name: puroearth/${{ needs.determine_env.outputs.env }}-test
+          stack-name: puroearth/${{ inputs.stack }}-test
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
 
@@ -110,12 +92,13 @@ jobs:
       - name: target state checkout
         uses: actions/checkout@v2
         with:
-          ref: ${{ steps.refs.head_ref }}
+          ref: ${{ inputs.head_ref }}
       - name: generate test stack yaml file
         run: |
-          cp Pulumi.${{ needs.determine_env.outputs.env }}.yaml Pulumi.${{ needs.determine_env.outputs.env }}-test.yaml
-          pulumi config set subdomain "$(pulumi config get subdomain --stack puroearth/${{ needs.determine_env.outputs.env }})test." --stack puroearth/${{ needs.determine_env.outputs.env }}-test
-          pulumi config set skip-final-snapshot "true" --stack puroearth/${{ needs.determine_env.outputs.env }}-test
+          cp Pulumi.${{ inputs.stack }}.yaml Pulumi.${{ inputs.stack }}-test.yaml
+          pulumi config set subdomain "$(pulumi config get subdomain --stack puroearth/${{ inputs.stack }})${{ inputs.subdomain_suffix }}" --stack puroearth/${{ inputs.stack }}-test
+          pulumi config set email-domain-prefix "$(pulumi config get email-domain-prefix --stack puroearth/${{ inputs.stack }})${{ inputs.emaildomain_suffix }}" --stack puroearth/${{ inputs.stack }}-test
+          pulumi config set skip-final-snapshot "true" --stack puroearth/${{ inputs.stack }}-test
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
       - name: yarn install
@@ -124,7 +107,7 @@ jobs:
         uses: pulumi/actions@v3
         with:
           command: preview
-          stack-name: puroearth/${{ needs.determine_env.outputs.env }}-test
+          stack-name: puroearth/${{ inputs.stack }}-test
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
 
@@ -134,7 +117,7 @@ jobs:
         id: changes
         with:
           command: up
-          stack-name: puroearth/${{ needs.determine_env.outputs.env }}-test
+          stack-name: puroearth/${{ inputs.stack }}-test
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
         continue-on-error: true
@@ -170,6 +153,6 @@ jobs:
         uses: pulumi/actions@v3
         with:
           command: destroy
-          stack-name: puroearth/${{ needs.determine_env.outputs.env }}-test
+          stack-name: puroearth/${{ inputs.stack }}-test
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
