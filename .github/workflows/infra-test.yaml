@@ -128,7 +128,7 @@ jobs:
       # Smoketest
       - name: Run smoke-tests
         id: test
-        if: ${{ steps.changes.outcome == 'success' }}
+        if: ${{ !skip_smoke_tests && steps.changes.outcome == 'success' }}
         run: yarn smoke-test
         continue-on-error: true
 
