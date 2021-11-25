@@ -127,6 +127,7 @@ jobs:
 
       # Authenticate to ECR, required for running the smoke-tests
       - name: Login to private ECR
+        if: ${{ !inputs.skip_smoke_tests && steps.changes.outcome == 'success' }}
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@446a798035445cdfd5111ad9a49f48d46083a170
         # Note: We're referencing the desired version by commit hash instead of version number,
