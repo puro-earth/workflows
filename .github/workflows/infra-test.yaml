@@ -125,6 +125,13 @@ jobs:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
         continue-on-error: true
 
+      # Authenticate to ECR, required for running the smoke-tests
+      - name: Login to private ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@446a798035445cdfd5111ad9a49f48d46083a170
+        # Note: We're referencing the desired version by commit hash instead of version number,
+        # since this newer version is not yet released and introduces required fixes we need.
+
       # Smoketest
       - name: Run smoke-tests
         id: test
