@@ -22,6 +22,8 @@ on:
         required: true
       pulumi_access_token:
         required: true
+      GH_PACKAGES_TOKEN:
+        required: true
 
 jobs:
   deploy:
@@ -30,12 +32,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/setup-node@v2
+      - name: Setup Node
+        uses: actions/setup-node@v2
         with:
           node-version: "14"
           cache: "yarn"
-
-      - run: yarn install --frozen-lockfile
+      
+      - name: Authenticate to GitHub Packages
+        run: echo "//npm.pkg.github.com/:_authToken=${GH_PACKAGES_TOKEN}" >> ~/.npmrc
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: assume aws deployment role
         uses: aws-actions/configure-aws-credentials@v1
