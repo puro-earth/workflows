@@ -19,6 +19,8 @@ on:
         required: true
       pulumi_access_token:
         required: true
+      gh_packages_token:
+        required: true
 
 jobs:
   preview:
@@ -37,6 +39,17 @@ jobs:
           role-to-assume: ${{ secrets.aws_role_arn }}
           role-duration-seconds: ${{ inputs.aws_role_duration }}
           role-session-name: deploymentSession
+
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: "14"
+          cache: "yarn"
+      
+      - name: Authenticate to GitHub Packages
+        run: echo "//npm.pkg.github.com/:_authToken=${GH_PACKAGES_TOKEN}" >> ~/.npmrc
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.gh_packages_token }}
 
       - name: Install Yarn dependencies
         run: yarn install --frozen-lockfile
