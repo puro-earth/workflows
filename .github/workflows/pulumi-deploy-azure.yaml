@@ -53,8 +53,12 @@ jobs:
           work-dir: ${{ inputs.work-dir }}
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+          # Required by Pulumi to access Azure resources
           ARM_CLIENT_ID: ${{ secrets.azure_client_id }}
           ARM_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
+          # Required by Pulumi to access Azure Key Vault as secret provider
+          AZURE_CLIENT_ID: ${{ secrets.azure_client_id }}
+          AZURE_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
 
       - uses: pulumi/actions@v3
         name: pulumi up
@@ -64,8 +68,12 @@ jobs:
           work-dir: ${{ inputs.work-dir }}
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+          # Required by Pulumi to access Azure resources
           ARM_CLIENT_ID: ${{ secrets.azure_client_id }}
           ARM_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
+          # Required by Pulumi to access Azure Key Vault as secret provider
+          AZURE_CLIENT_ID: ${{ secrets.azure_client_id }}
+          AZURE_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
 
       - name: Run smoke-tests
         if: ${{ !inputs.skip_smoke_tests }}
