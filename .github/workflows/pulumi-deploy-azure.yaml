@@ -13,9 +13,7 @@ on:
         type: boolean
         default: false
     secrets:
-      azure_client_id:
-        required: true
-      azure_client_secret:
+      azure_credentials:
         required: true
       pulumi_access_token:
         required: true
@@ -44,6 +42,10 @@ jobs:
         working-directory: ${{ inputs.work-dir }}
         run: yarn install --frozen-lockfile
 
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.azure_credentials }}
+
       - uses: pulumi/actions@v3
         name: pulumi preview
         with:
@@ -54,11 +56,9 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
           # Required by Pulumi to access Azure resources
-          ARM_CLIENT_ID: ${{ secrets.azure_client_id }}
-          ARM_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
-          # Required by Pulumi to access Azure Key Vault as secret provider
-          AZURE_CLIENT_ID: ${{ secrets.azure_client_id }}
-          AZURE_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
+          ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
+          AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
       - uses: pulumi/actions@v3
         name: pulumi up
@@ -69,11 +69,9 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
           # Required by Pulumi to access Azure resources
-          ARM_CLIENT_ID: ${{ secrets.azure_client_id }}
-          ARM_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
-          # Required by Pulumi to access Azure Key Vault as secret provider
-          AZURE_CLIENT_ID: ${{ secrets.azure_client_id }}
-          AZURE_CLIENT_SECRET: ${{ secrets.azure_client_secret }}
+          ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
+          AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
       - name: Run smoke-tests
         if: ${{ !inputs.skip_smoke_tests }}
