@@ -1,0 +1,59 @@
+name: preview PR to main
+on:
+  workflow_call:
+    inputs:
+      stack:
+        required: true
+        type: string
+      work-dir:
+        required: false
+        type: string
+        default: "./"
+    secrets:
+      azure_credentials:
+        required: true
+      pulumi_access_token:
+        required: true
+      gh_packages_token:
+        required: true
+
+jobs:
+  preview:
+    name: pulumi preview 
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: "14"
+          cache: "yarn"
+      
+      - name: Authenticate to GitHub Packages
+        run: echo "//npm.pkg.github.com/:_authToken=${GH_PACKAGES_TOKEN}" >> ~/.npmrc
+        env:
+          GH_PACKAGES_TOKEN: ${{ secrets.gh_packages_token }}
+
+      - name: Install Yarn dependencies
+        working-directory: ${{ inputs.work-dir }}
+        run: yarn install --frozen-lockfile
+
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.azure_credentials }}
+
+      - uses: pulumi/actions@v3
+        name: pulumi preview
+        with:
+          command: preview
+          stack-name: puroearth/${{ inputs.stack }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          work-dir: ${{ inputs.work-dir }}
+          comment-on-pr: true
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+          # Required by Pulumi to access Azure resources
+          ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
+          AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
