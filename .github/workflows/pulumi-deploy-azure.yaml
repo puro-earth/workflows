@@ -24,6 +24,7 @@ jobs:
   deploy:
     name: pulumi deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v2
 
@@ -62,6 +63,7 @@ jobs:
 
       - uses: pulumi/actions@v3
         name: pulumi up
+        timeout-minutes: 20
         with:
           command: up
           stack-name: puroearth/${{ inputs.stack }}
