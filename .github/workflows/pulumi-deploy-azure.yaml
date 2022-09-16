@@ -26,7 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
-    environment: ${{ inputs.stack }}
+    environment: 
+      name: ${{ inputs.stack }}
+      url: ${{ steps.deploy.outputs.environmentUrl }} 
     
     steps:
       - uses: actions/checkout@v2
@@ -66,6 +68,7 @@ jobs:
 
       - uses: pulumi/actions@v3
         name: pulumi up
+        id: deploy
         timeout-minutes: 20
         with:
           command: up
