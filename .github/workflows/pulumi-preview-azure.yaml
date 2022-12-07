@@ -24,10 +24,25 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+<<<<<<< Updated upstream:.github/workflows/pulumi-preview-azure.yaml
       - name: Setup Node
         uses: actions/setup-node@v2
+=======
+      - name: assume aws deployment role
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          node-version: "14"
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ secrets.aws_region }}
+          role-to-assume: ${{ secrets.aws_role_arn }}
+          role-duration-seconds: ${{ inputs.aws_role_duration }}
+          role-session-name: deploymentSession
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3.5.1
+>>>>>>> Stashed changes:.github/workflows/pulumi-preview.yaml
+        with:
+          node-version-file: ".nvmrc"
           cache: "yarn"
       
       - name: Authenticate to GitHub Packages
