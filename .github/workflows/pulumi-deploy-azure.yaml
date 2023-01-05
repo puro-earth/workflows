@@ -26,6 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     
+    concurrency: 
+      group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+      cancel-in-progress: true
+    
     environment: 
       name: ${{ inputs.stack }}
       url: ${{ steps.deploy.outputs.environmentUrl }} 
