@@ -44,6 +44,8 @@ jobs:
           creds: ${{ secrets.azure_credentials }}
 
       - uses: pulumi/actions@v3
+        continue-on-error: true
+        id: preview-attempt-1
         name: pulumi preview
         with:
           command: preview
@@ -51,6 +53,21 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           work-dir: ${{ inputs.work-dir }}
           comment-on-pr: true
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
+          # Required by Pulumi to access Azure resources
+          ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
+          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
+          AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
+      
+      - uses: pulumi/actions@v3
+        if: steps.preview-attempt-1.outcome == 'failure' 
+        name: pulumi preview (retry, if needed)
+        with:
+          command: preview
+          stack-name: puroearth/${{ inputs.stack }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          work-dir: ${{ inputs.work-dir }}
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
           # Required by Pulumi to access Azure resources
