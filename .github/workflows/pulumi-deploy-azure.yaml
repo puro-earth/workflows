@@ -56,7 +56,7 @@ jobs:
         with:
           creds: ${{ secrets.azure_credentials }}
 
-      - uses: pulumi/actions@v3
+      - uses: pulumi/actions@v4
         continue-on-error: true
         id: preview-attempt-1
         name: pulumi preview
@@ -72,7 +72,7 @@ jobs:
           ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
       
-      - uses: pulumi/actions@v3
+      - uses: pulumi/actions@v4
         if: steps.preview-attempt-1.outcome == 'failure' 
         name: pulumi preview (retry, if needed)
         with:
@@ -87,7 +87,7 @@ jobs:
           ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
-      - uses: pulumi/actions@v3
+      - uses: pulumi/actions@v4
         name: pulumi up
         id: deploy
         timeout-minutes: 20
