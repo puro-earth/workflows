@@ -56,6 +56,10 @@ jobs:
         with:
           creds: ${{ secrets.azure_credentials }}
 
+      - uses: azure/use-kubelogin@v1
+        with:
+          kubelogin-version: 'v0.0.29'
+
       - uses: pulumi/actions@v4
         name: pulumi refresh
         with:
@@ -68,6 +72,8 @@ jobs:
           # Required by Pulumi to access Azure resources
           ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
           ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
+          AAD_SERVICE_PRINCIPAL_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
+          AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
       - uses: pulumi/actions@v4
@@ -84,6 +90,8 @@ jobs:
           # Required by Pulumi to access Azure resources
           ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
           ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
+          AAD_SERVICE_PRINCIPAL_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
+          AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
       
       - uses: pulumi/actions@v4
@@ -99,6 +107,8 @@ jobs:
           # Required by Pulumi to access Azure resources
           ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
           ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
+          AAD_SERVICE_PRINCIPAL_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
+          AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
       - uses: pulumi/actions@v4
@@ -114,6 +124,8 @@ jobs:
           # Required by Pulumi to access Azure resources
           ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
           ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
+          AAD_SERVICE_PRINCIPAL_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
+          AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
       - name: Run smoke-tests
