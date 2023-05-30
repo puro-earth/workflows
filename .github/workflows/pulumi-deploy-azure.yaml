@@ -114,24 +114,6 @@ jobs:
           AAD_LOGIN_METHOD: "spn"
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
-      - uses: pulumi/actions@v4
-        name: pulumi up
-        id: deploy
-        timeout-minutes: 20
-        with:
-          command: up
-          stack-name: puroearth/${{ inputs.stack }}
-          work-dir: ${{ inputs.work-dir }}
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.pulumi_access_token }}
-          # Required by Pulumi to access Azure resources
-          ARM_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
-          ARM_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
-          AAD_SERVICE_PRINCIPAL_CLIENT_ID: ${{ fromJSON(secrets.azure_credentials).clientId }}
-          AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
-          AAD_LOGIN_METHOD: "spn"
-          AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
-
       - name: Run smoke-tests
         if: ${{ !inputs.skip_smoke_tests }}
         run: yarn smoke-test
