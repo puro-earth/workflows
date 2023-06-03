@@ -50,7 +50,7 @@ jobs:
 
       - name: Install Yarn dependencies
         working-directory: ${{ inputs.work-dir }}
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - uses: azure/login@v1
         with:
