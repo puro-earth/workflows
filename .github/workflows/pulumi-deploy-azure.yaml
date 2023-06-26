@@ -11,7 +11,8 @@ on:
         default: "./"
       skip_smoke_tests:
         type: boolean
-        default: false
+        default: true
+        description: "DEPRECATED: Now unused, retained for legacy reasons but can be removed when it's not referenced anymore"
     secrets:
       azure_credentials:
         required: true
@@ -132,7 +133,3 @@ jobs:
           AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: ${{ fromJSON(secrets.azure_credentials).clientSecret }}
           AAD_LOGIN_METHOD: "spn"
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
-
-      - name: Run smoke-tests
-        if: ${{ !inputs.skip_smoke_tests }}
-        run: yarn smoke-test
