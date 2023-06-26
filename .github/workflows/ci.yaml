@@ -1,0 +1,20 @@
+name: Lint Workflow YAML Files
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate-yaml:
+    name: Validate YAML
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install yamllint
+        run: sudo apt-get install -y yamllint
+
+      - name: Lint YAML Files
+        run: yamllint .github/workflows/
