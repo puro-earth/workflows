@@ -61,7 +61,7 @@ jobs:
         with:
           kubelogin-version: 'v0.0.29'
 
-      - uses: pulumi/actions@v4
+      - uses: pulumi/actions@v5
         name: pulumi refresh
         continue-on-error: true
         with:
@@ -79,7 +79,7 @@ jobs:
           AAD_LOGIN_METHOD: "spn"
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
-      - uses: pulumi/actions@v4
+      - uses: pulumi/actions@v5
         continue-on-error: true
         id: preview-attempt-1
         name: pulumi preview
@@ -98,7 +98,7 @@ jobs:
           AAD_LOGIN_METHOD: "spn"
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
       
-      - uses: pulumi/actions@v4
+      - uses: pulumi/actions@v5
         if: steps.preview-attempt-1.outcome == 'failure' 
         name: pulumi preview (retry, if needed)
         with:
@@ -116,7 +116,7 @@ jobs:
           AAD_LOGIN_METHOD: "spn"
           AZURE_KEYVAULT_AUTH_VIA_CLI: "true"
 
-      - uses: pulumi/actions@v4
+      - uses: pulumi/actions@v5
         name: pulumi up
         id: deploy
         timeout-minutes: 20
